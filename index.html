@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .task { margin: 10px 0; }
+        .task button { margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Task Manager</h1>
+    <form id="taskForm">
+        <input type="text" id="title" placeholder="Task Title" required />
+        <textarea id="description" placeholder="Task Description" required></textarea>
+        <button type="submit">Add Task</button>
+        <button type="button" id="updateButton" style="display:none;">Update Task</button>
+    </form>
+
+    <div id="taskList"></div>
+
+    <script>
+        const taskForm = document.getElementById('taskForm');
+        const taskList = document.getElementById('taskList');
+        const updateButton = document.getElementById('updateButton');
+        let editingTaskId = null;
+
+        
+        function fetchTasks() {
+            fetch('http://localhost:3000/tasks')
+                .then(response => response.json())
+                .then(data => {
+                    taskList.innerHTML = '';
+                    data.forEach(task => {
+                        taskList.innerHTML += `<div class="task">
+                            <h3>${task.title}</h3>
+                            <p>${task.description}</p>
+                            <button onclick="editTask(${task.id}, '${task.title}', '${task.description}')">Edit</button>
+                            <button onclick="deleteTask(${task.id})">Delete</button>
+                            </div>`;
+                    });
+                });
+        }
+
+      
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+
+            if (!editingTaskId) {
+                
+                fetch('http://localhost:3000/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description })
+                }).then(() => {
+                    fetchTasks();
+                    taskForm.reset();
+                });
+            }
+        });
+
+        
+        function editTask(id, title, description) {
+            document.getElementById('title').value = title;
+            document.getElementById('description').value = description;
+            editingTaskId = id;
+            updateButton.style.display = 'inline-block';
+        }
+
+        
+        updateButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+
+            fetch(`http://localhost:3000/tasks/${editingTaskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, description })
+            }).then(() => {
+                fetchTasks();
+                taskForm.reset();
+                updateButton.style.display = 'none';
+                editingTaskId = null;
+            });
+        });
+
+        
+        function deleteTask(id) {
+            fetch(`http://localhost:3000/tasks/${id}`, { method: 'DELETE' })
+                .then(() => fetchTasks());
+        }
+
+        fetchTasks();
+    </script>
+</body>
+</html>
